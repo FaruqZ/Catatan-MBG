@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MBG MEMBUAT PINTAR</title>
+<style>
+:root{--bg:#e9eeec;--ink:#14231d;--mut:#55655e;--card:#fff;--line:#c9d3cf;--acc:#1f6f5b;--warn:#b8431f}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1a16;--ink:#e6eeea;--mut:#9bb0a7;--card:#17251f;--line:#2b3d35;--acc:#5fc1a5;--warn:#f08a62}}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 system-ui,"Segoe UI",sans-serif}
+main{max-width:920px;margin:0 auto;padding:40px 20px 80px}
+h1{font-size:clamp(2rem,6vw,3.4rem);line-height:1.1;margin:0 0 12px}
+h2.kat{font-size:1.45rem;margin:36px 0 12px;scroll-margin-top:16px}
+.lead{max-width:62ch;color:var(--mut);margin:0 0 24px}
+input{width:100%;padding:12px 14px;border:2px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);font:inherit;margin-bottom:16px}
+.tray{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:24px}
+.tray button{background:var(--card);color:var(--ink);border:2px solid var(--line);border-radius:14px 14px 6px 6px;padding:10px 12px;text-align:left;font:inherit;cursor:pointer}
+.tray button b{display:block;font-size:1.5rem}
+.tray button[aria-pressed=true]{border-color:var(--acc);background:var(--acc);color:var(--bg)}
+:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+nav.toc{background:var(--card);border:2px solid var(--line);border-radius:6px;padding:16px 20px;margin-bottom:24px}
+nav.toc h2{margin:0 0 8px;font-size:1.15rem}
+nav.toc ul{margin:0 0 8px;padding-left:20px}nav.toc>ul{list-style:none;padding:0}
+nav.toc>ul>li>a{font-weight:700}
+article{background:var(--card);border-left:6px solid var(--acc);border-radius:6px;padding:16px 20px;margin-bottom:14px;scroll-margin-top:16px}
+article.kosong{border-left-color:var(--warn)}
+article h3{margin:0 0 4px;font-size:1.15rem}
+.meta{color:var(--mut);font-size:.9rem;margin:0 0 8px}
+.badge{display:inline-block;background:var(--warn);color:#fff;border-radius:4px;padding:1px 8px;font-size:.8rem;margin-right:6px}
+.src{margin:8px 0 0;padding-left:20px;font-size:.92rem}
+.gov{border-top:1px dashed var(--line);margin-top:10px;padding-top:8px;color:var(--mut)}
+.gov strong{color:var(--ink)}
+a{color:var(--acc)}footer{margin-top:40px;font-size:.9rem;color:var(--mut);border-top:1px solid var(--line);padding-top:16px}
+</style>
+</head>
+<body>
+<main>
+<h1>MBG MEMBUAT PINTAR</h1>
+<p class="lead">Kumpulan masalah Makan Bergizi Gratis yang tercatat, lengkap dengan sumber dan tanggapan pemerintah. Setiap catatan bisa diperiksa lewat tautan sumbernya.</p>
+<nav class="toc" id="toc" aria-label="Daftar isi"></nav>
+<input id="q" type="search" placeholder="Cari catatan…" aria-label="Cari catatan">
+<div class="tray" id="tray"></div>
+<div id="list"></div>
+<footer>
+<p><strong>Metodologi.</strong> Data dirangkum dari pemberitaan, dokumen lembaga, dan pernyataan resmi. Angka antarsumber bisa berbeda karena periode dan metode pencatatan. Kasus hukum yang sedang berjalan ditulis sebagai dugaan (asas praduga tak bersalah). Koreksi diterima.</p>
+<p>Terakhir diperbarui: <span id="upd"></span></p>
+</footer>
+</main>
+<script>
+const UPDATED = "6 Oktober 2026";
+const KATEGORI = ["Keamanan pangan","Anggaran","Gizi dan menu","Tata kelola","Pelaksanaan di lapangan"];
+
+// Daftar sumber: kunci -> [nama, url]
+const S = {
+ bisnisPidana:["Bisnis.com: peluang jerat pidana","https://kabar24.bisnis.com/read/20260905/15/2001362/peluang-jerat-pidana-di-kasus-keracunan-mbg"],
+ nuJppi:["NU Online: data JPPI","https://nu.or.id/nasional/jppi-korban-keracunan-mbg-capai-40-759-orang-sejak-2025-6MDir"],
+ inews:["iNews: kasus Grobogan","https://www.inews.id/regional/jateng/wakil-kepala-bgn-jenguk-pasien-diduga-korban-keracunan-mbg-di-grobogan/all"],
+ investor:["Investortrust: kasus Semarang","https://investortrust.id/national/111459/kepala-bgn-kunjungi-korban-keracunan-mbg-di-semarang"],
+ katadata:["Katadata: 5.482 korban, soroti SOP","https://katadata.co.id/berita/nasional/6a9a5b8dc9d81/5482-korban-keracunan-mbg-sejak-akhir-juli-2026-bgn-soroti-pelanggaran-sop"],
+ kontanDes:["Kontan: klaim BGN kasus menurun","https://nasional.kontan.co.id/news/bos-bgn-klaim-kasus-keracunan-mbg-menurun-periode-desember-hanya-4-kasus"],
+ menkes25:["Bisnis.com: Menkes soal SLHS (2025)","https://kabar24.bisnis.com/read/20250928/15/1915424/menkes-akui-sebagian-besar-dapur-mbg-belum-punya-slhs"],
+ zulhas:["Bisnis.com: Zulhas, 8.000 dapur belum SLHS","https://ekonomi.bisnis.com/read/20260729/12/1992084/zulhas-masih-ada-8000-dapur-mbg-belum-kantongi-sertifikat-higiene-sanitasi"],
+ ddtcSlhs:["DDTCNews: 1.999 dapur ditutup","https://news.ddtc.co.id/berita/nasional/1822343/tak-punya-sertifikat-higiene-ribuan-dapur-mbg-ditutup"],
+ ombud:["Ombudsman RI: temuan di Sumut","https://ombudsman.go.id/news/download/pwkmedia--ombudsman-ungkap-fakta-baru-mbg-di-sumut-2-sampel-positif-bakteri-200-sppg-belum-kantongi-slhs"],
+ metroKpk:["Metro TV: BGN bahas kajian KPK","https://www.metrotvnews.com/read/NG9CzpPm-sambangi-kpk-pimpinan-bgn-bahas-kajian-tata-kelola-mbg"],
+ hukumKorban:["Hukumonline: langkah hukum korban","https://www.hukumonline.com/stories/article/lt69852d3f9f8bc/penilaian-pengadilan-dalam-kasus-keamanan-pangan/"],
+ hukumKpk:["Hukumonline: catatan KPK","https://www.hukumonline.com/berita/a/kpk-beri-catatan-pelaksanaan-mbg-lt6a0d9285a43b6?page=all"],
+ bisnisKpk:["Bisnis.com: catatan dan usulan KPK","https://kabar24.bisnis.com/read/20260420/16/1967750/catatan-dan-usulan-kpk-untuk-program-mbg"],
+ goodstats:["GoodStats: RAPBN 2027 dan serapan 2026","https://data.goodstats.id/statistic/rapbn-2027-belanja-bgn-turun-jadi-rp240-t-ImAH7"],
+ ddtc97:["DDTCNews: 97% anggaran untuk MBG","https://news.ddtc.co.id/berita/nasional/1822000/anggaran-bgn-2027-capai-rp240-triliun-97-persen-untuk-program-mbg"],
+ pasardana:["Pasardana: Menkeu soal efisiensi","https://pasardana.id/news/2026/5/20/menkeu-purbaya-terus-dukung-program-mbg-efisiensi-anggaran-dilanjutkan"],
+ gebrak:["Gebrak.id: realisasi BGN 2025","https://www.gebrak.id/2026/08/anggaran-bgn-tembus-rp-2402-triliun-di-rapbn-2027-paling-besar-di-atas-kemhan-dan-kesehatan.html"],
+ bisnisPagu:["Bisnis.com: pagu 2027 dan refocusing penerima","https://ekonomi.bisnis.com/read/20260721/12/1989901/bgn-sebut-pagu-anggaran-2027-rp270-triliun-belum-final"],
+ bisnis10M:["Bisnis.com: Rp10 miliar per dapur","https://ekonomi.bisnis.com/read/20251007/12/1918251/setiap-dapur-mbg-dapat-anggaran-rp10-miliar-per-tahun-ini-alokasinya"],
+ bisnis6jt:["Bisnis.com: insentif Rp6 juta per hari","https://ekonomi.bisnis.com/read/20251207/12/1934845/bgn-ancam-pangkas-insentif-rp6-juta-per-hari-untuk-dapur-mbg-nakal"],
+ kontanIcw:["Kontan: ICW soal dugaan mark up","https://nasional.kontan.co.id/news/prabowo-minta-ksp-telusuri-dugaan-korupsi-mbg-icw-sangat-terlambat"],
+ pangsit:["Bisnis.com: menu pangsit goreng","https://ekonomi.bisnis.com/read/20251008/12/1918501/heboh-ada-menu-pangsit-goreng-di-mbg-ini-penjelasan-bgn"],
+ tirtoBurger:["Tirto: kritik menu ultra-olahan","https://tirto.id/bgn-soal-burger-di-menu-mbg-biar-enggak-bosan-makan-nasi-hisQ"],
+ ipb:["Jurnal IPB: kajian pemenuhan gizi MBG","https://journal.ipb.ac.id/agro-maritim/article/download/70907/32786/392889"],
+ ugm:["UGM: pakar soal menu dan food waste","https://ugm.ac.id/?p=74928"],
+ kontanDepok:["Kontan: menu Depok, BGN minta evaluasi","https://nasional.kontan.co.id/news/viral-menu-mbg-di-depok-isi-pangsit-kentang-rebus-bgn-minta-evaluasi-menu"],
+ nuKemenkes:["NU Online: Kemenkes hanya siapkan standar gizi","https://nu.or.id/nasional/kemenkes-sebut-hanya-siapkan-standar-gizi-menu-mbg-tanggung-jawab-sppg-XynYc"],
+ rctiKejagung:["RCTI+: temuan Kejagung","https://www.rctiplus.com/news/detail/nasional/5398103/dadan-hindayana-cs-jadi-tersangka-korupsi-mbg--kerugian-negara-masih-dihitung-kejagung"],
+ metroTsk:["Metro TV: penetapan tersangka","https://www.metrotvnews.com/read/NOlC9lGv-dadan-hindayana-tersangka-dugaan-korupsi-tata-kelola-mbg"],
+ tirtoDosa:["Tirto: dugaan penjualan titik SPPG dan mark up","https://tirto.id/dua-dosa-dadan-hindayana-cs-di-kasus-dugaan-korupsi-mbg-hxh3"],
+ metroIcw:["Metro TV: ICW, 102 yayasan","https://www.metrotvnews.com/play/K5nCRv45-icw-temukan-banyak-yayasan-dapur-mbg-diduga-terafiliasi-aktor-politik"],
+ icwPolri:["Bisnis.com: ICW soal 1.179 SPPG Polri","https://kabar24.bisnis.com/read/20260225/15/1955497/icw-minta-kpk-awasi-pengelolaan-1179-sppg-polri"],
+ ti:["Transparency International Indonesia: risiko korupsi MBG","https://ti.or.id/wp-content/uploads/2025/06/Risiko-Korupsi-Dibalik-Hidangan-Makan-Bergizi-Gratis_web.pdf"],
+ antaraHapus:["ANTARA: BGN hapus 1.414 usulan SPPG","https://www.antaranews.com/berita/5185397/bgn-hapus-1414-usulan-sppg-tak-berprogres"],
+ kontanStop:["Kontan: ICW desak MBG dihentikan","https://nasional.kontan.co.id/news/icw-desak-presiden-prabowo-hentikan-program-mbg-ada-apa"],
+ bisnisLibur:["Bisnis.com: mitra tolak henti operasi saat libur","https://kabar24.bisnis.com/read/20260619/15/1981818/mitra-mbg-tolak-rencana-bgn-untuk-setop-operasional-sppg-selama-libur-sekolah"],
+ jawapos:["JawaPos: gaji kepala dapur dan ahli gizi","https://www.jawapos.com/nasional/2504160283/gaji-ribuan-kepala-dapur-mbg-dikabarkan-belum-dibayar-3-bulan-kepala-bgn-klaim-kewajibannya-sudah-tuntas"],
+ detik:["Detik: omzet kantin turun","https://www.detik.com/jateng/bisnis/d-7726621/bu-kantin-di-semarang-sambat-omzet-merosot-buntut-makan-bergizi-gratis"],
+ detikFin:["Detik Finance: omzet turun 40%","https://finance.detik.com/berita-ekonomi-bisnis/d-7734771/jeritan-ibu-kantin-omzet-merosot-40-gara-gara-ada-makan-gratis"],
+ times:["Times Indonesia: kantin di Malang","https://timesindonesia.co.id/peristiwa-daerah/523730/penjual-makanan-di-kantin-sekolah-di-malang-mengaku-terimbas-program-makan-bergizi-gratis"],
+ bengkulu:["Jurnal IPM2KPE: studi Kota Bengkulu","https://journal.ipm2kpe.or.id/index.php/JOPPAS/article/download/20232/13415/175491"]
+};
+
+const f = (kategori,judul,tanggal,fakta,src,tanggapan="") => ({kategori,judul,tanggal,fakta,sumber:src.map(k=>S[k]),tanggapan,petunjuk:""});
+const t = (kategori,judul,petunjuk) => ({kategori,judul,petunjuk,fakta:"",tanggal:"",sumber:[],tanggapan:""});
+
+const catatan = [
+// ===== KEAMANAN PANGAN =====
+f("Keamanan pangan","Kasus keracunan di sekolah: jumlah kejadian, korban, dan wilayah","2026-09-03",
+ "Data surveilans Kemenkes per 2 September 2026, disebut Wakil Ketua Komisi IX DPR: korban keracunan MBG melampaui 50.000 orang dalam 560 kejadian di 36 provinsi. JPPI mencatat 40.759 korban sejak 2025. Angka berbeda karena periode dan metode pencatatan berbeda. Kasus besar: Grobogan (803 orang, Januari 2026) dan Semarang (707 orang, 31 Juli 2026).",
+ ["bisnisPidana","nuJppi","inews","investor"],
+ "BGN (Kepala BGN Sudaryono) mencatat 5.482 korban dalam 71 kejadian sejak 22 Juli 2026 dan menyebut pelanggaran SOP serta kapasitas dapur yang tidak sesuai jumlah penerima. Kepala BGN sebelumnya mengklaim kasus menurun akhir 2025 dan menargetkan nol insiden pada 2026."),
+f("Keamanan pangan","Standar higienitas dapur dan sertifikasi laik higiene sanitasi (SLHS)","2026-09-10",
+ "Per 22 September 2025 hanya 34 dari 8.583 SPPG punya SLHS. Pada 29 Juli 2026 Menko Pangan menyebut sekitar 8.000 dari 27.000 dapur belum bersertifikat. BGN menutup 1.999 dapur per 10 September 2026 karena tidak mendaftar. Ombudsman Sumut menemukan sekitar 200 SPPG belum ber-SLHS dan bakteri pada dua sampel.",
+ ["menkes25","zulhas","ddtcSlhs","ombud"],
+ "BGN menyatakan SLHS syarat mutlak, dengan batas akhir 10 Agustus 2026 dan penutupan permanen bagi yang tidak memenuhi."),
+f("Keamanan pangan","Pelanggaran SOP pengolahan dan kapasitas dapur tidak sesuai penerima","2026-09-04",
+ "Kepala BGN menyebut mayoritas insiden terkait pelanggaran SOP, terutama dapur kecil yang diberi penerima besar. Kajian KPK menilai pengawasan keamanan pangan belum optimal karena keterlibatan Dinkes dan BPOM minim. Catatan: data jeda waktu masak hingga saji belum ditemukan.",
+ ["katadata","metroKpk"],
+ "BGN berjanji menindak SPPG pelanggar dan menyisir penerima yang mungkin terdampak."),
+f("Keamanan pangan","Penanganan korban dan transparansi laporan insiden","2026-09-05",
+ "Pakar hukum pidana menilai mayoritas kasus akibat kelalaian petugas SPPG dan berpotensi pidana; polisi didorong mengusut tanpa menunggu laporan. BGN mengaku masih menyisir penerima sakit yang tidak tercatat dirawat.",
+ ["bisnisPidana","hukumKorban","katadata"],
+ "BGN menyatakan tim investigasi bekerja dan akan menindak tegas bila ditemukan kelalaian."),
+// ===== ANGGARAN =====
+f("Anggaran","Besaran anggaran MBG dan porsinya dalam APBN","2026-08-29",
+ "Anggaran BGN 2026 semula Rp268 triliun, dipangkas menjadi Rp229 triliun (sempat disebut Rp335 triliun). RAPBN 2027 menetapkan Rp240,2 triliun, terbesar di antara K/L: Rp232,78 triliun untuk MBG dan Rp7,41 triliun operasional.",
+ ["goodstats","ddtc97","pasardana"],
+ "Menkeu Purbaya menyatakan program tetap didukung dengan peningkatan efisiensi."),
+f("Anggaran","Realisasi anggaran dibanding target penerima","2026-08-28",
+ "Realisasi BGN 2025 Rp51,59 triliun dari pagu Rp71 triliun (72,66%), dengan tunggakan belanja Rp1,6 triliun. Serapan 2026 mencapai 56% (Rp117 triliun) per 27 Agustus. Target penerima disesuaikan menjadi sekitar 62,7 juta. Pejabat KPK menyebut perkiraan sekitar Rp12 triliun dana mengendap di rekening yayasan pada 2025.",
+ ["gebrak","goodstats","bisnisPagu","hukumKpk"],
+ "BGN menyebut fokusnya memperbaiki tata kelola. Menkeu memperkirakan realisasi 2026 bisa di bawah Rp200 triliun."),
+t("Anggaran","Efisiensi anggaran di sektor lain yang berkaitan dengan MBG","Perkara uji materi di Mahkamah Konstitusi soal MBG dalam anggaran pendidikan (situs MK, Hukumonline), dokumen APBN Kemenkeu, ICW"),
+f("Anggaran","Struktur biaya dapur, insentif fasilitas, dan dugaan mark up pembangunan","2025-10-07",
+ "BGN menyebut tiap SPPG menerima sekitar Rp10 miliar per tahun: 85% bahan baku, 10,5% relawan dan operasional. Dapur juga menerima insentif fasilitas Rp6 juta per hari. ICW mencatat biaya bangun SPPG Rp600 juta sampai Rp2 miliar dan menduga mark up. Catatan: perbandingan biaya per porsi dengan harga riil belum ditemukan.",
+ ["bisnis10M","bisnis6jt","kontanIcw"],
+ "BGN menyatakan insentif dipangkas bagi dapur yang tidak memenuhi SOP."),
+// ===== GIZI DAN MENU =====
+f("Gizi dan menu","Kesesuaian menu dengan standar gizi","2025-10-08",
+ "Menu pangsit goreng dan kentang rebus di SPPG Depok viral karena dinilai tak sesuai komposisi gizi. Dokter gizi Tan Shot Yen mengkritik menu burger dan spageti sebagai ultra-olahan. Kajian IPB menemukan sebagian komponen, termasuk hewani, cenderung di bawah standar. Wakil Kepala BGN mengakui kekurangan ahli gizi berpengalaman.",
+ ["pangsit","tirtoBurger","ipb"],
+ "BGN menyebut kentang dipakai untuk menekan sisa makanan dan merekomendasikan evaluasi menu dan porsi."),
+f("Gizi dan menu","Variasi menu dan makanan yang terbuang","2025-10-08",
+ "Pakar UGM mengingatkan lauk yang tak disukai anak berakhir terbuang dan menyarankan standardisasi menu. Kajian IPB mencatat sisa makanan tertinggi pada sayur dan lauk.",
+ ["ugm","ipb","kontanDepok"],
+ "Menko Pangan menyatakan prioritas menu adalah standar gizi, belum tentu sesuai selera anak."),
+f("Gizi dan menu","Penyesuaian dengan pangan lokal dan kebutuhan khusus (alergi, usia)","2025-10-08",
+ "Tan Shot Yen mendorong menu pangan lokal seperti kapurung di Sulawesi atau ikan kuah asam di Papua. Kemenkes menyatakan hanya menetapkan standar gizi dan keamanan pangan, menu disusun ahli gizi tiap SPPG. Catatan: sumber khusus alergi dan kebutuhan usia belum ditemukan.",
+ ["tirtoBurger","nuKemenkes"],
+ "Kemenkes menyatakan SPPG yang tidak memenuhi standar harus diperbaiki atau ditutup."),
+// ===== TATA KELOLA =====
+f("Tata kelola","Mekanisme pengadaan dan pemilihan mitra atau pengelola dapur","2026-06-03",
+ "Kejagung menduga yayasan tak memenuhi syarat tetap ditunjuk mitra lewat pengaturan verifikasi di portal BGN. KPK menilai rekrutmen pengelola tidak transparan; TI Indonesia menemukan indikasi konflik kepentingan. BGN menghapus 1.414 usulan SPPG mandek dan mencatat titik fiktif serta laporan pungli.",
+ ["rctiKejagung","hukumKpk","ti","antaraHapus"],
+ "BGN menyatakan akan lebih selektif memilih mitra dan memperketat verifikasi sebelum pembangunan."),
+f("Tata kelola","Pengawasan dan audit (BPK, inspektorat, lembaga independen)","2026-07-07",
+ "Kajian Direktorat Monitoring KPK menilai BGN memegang perencanaan, pelaksanaan, hingga pengawasan tanpa check and balance kuat, dan indikator keberhasilan belum terukur. KPK memberi tujuh rekomendasi. Catatan: rincian temuan BPK dan BPKP belum ditemukan.",
+ ["bisnisKpk","metroKpk","hukumKpk"],
+ "BGN membentuk tim tindak lanjut atas temuan KPK, BPK, dan BPKP."),
+f("Tata kelola","Potensi konflik kepentingan dalam penunjukan mitra","2026-06-03",
+ "Kejagung menetapkan mantan Kepala BGN Dadan Hindayana dan dua mantan wakilnya (Sony Sonjaya, Lodewyk Pusung) sebagai tersangka pada 3 Juni 2026. Dugaannya: yayasan terafiliasi tersangka diloloskan dan menerima insentif besar, serta mark up empat pengadaan; kerugian negara masih dihitung. ICW menemukan dugaan afiliasi politik pada 102 yayasan dan meminta KPK mengawasi 1.179 SPPG Polri. Ini dugaan dalam proses hukum; berlaku asas praduga tak bersalah.",
+ ["metroTsk","rctiKejagung","tirtoDosa","metroIcw","icwPolri"],
+ "Presiden mencopot Dadan sehari sebelum penetapan tersangka dan meminta KSP menelusuri dugaan korupsi MBG, langkah yang oleh ICW dinilai terlambat."),
+f("Tata kelola","Keterbukaan data penerima dan lokasi dapur","2026-07-29",
+ "Ombudsman menemukan pemda kadang tak tahu pasti jumlah dan lokasi SPPG di wilayahnya. KPK menilai transparansi verifikasi mitra dan penentuan lokasi dapur lemah.",
+ ["ombud","bisnisKpk","zulhas"],
+ "Pemerintah berencana verifikasi ulang data sekitar 63 juta penerima dan 27.000 SPPG serta merevisi aturan."),
+// ===== PELAKSANAAN DI LAPANGAN =====
+f("Pelaksanaan di lapangan","Pemerataan jangkauan antarwilayah, terutama daerah terpencil","2026-07-29",
+ "Sekitar 13.000 dapur baru diprioritaskan di daerah stunting tinggi seperti Papua Pegunungan dan NTT. Pada Desember 2025 BGN mencatat capaian Jawa Barat 80% dan Jawa Tengah 83%. Kemenkeu memerintahkan penilaian aset SPPG di daerah 3T. Catatan: data kesenjangan rinci bisa dicari di BGN dan BPS.",
+ ["zulhas","ddtc97","kontanDes"],
+ "BGN menyatakan mempercepat pembangunan SPPG di daerah terpencil."),
+f("Pelaksanaan di lapangan","Kondisi kerja relawan dan pekerja dapur","2026-06-19",
+ "Asosiasi mitra menyebut relawan adalah pekerja harian; henti operasi saat libur sekolah berpotensi menghilangkan penghasilan sekitar Rp4 triliun di 27.000 SPPG. Pada April 2025 gaji sekitar 1.994 kepala SPPG, ahli gizi, dan akuntan dilaporkan tertunggak tiga bulan.",
+ ["bisnisLibur","jawapos"],
+ "Kepala BGN saat itu menyatakan kewajiban BGN sudah dibayarkan ke yayasan dan persoalannya internal mitra."),
+f("Pelaksanaan di lapangan","Keterlambatan distribusi dan pembayaran mitra","2025-04-16",
+ "ICW melaporkan mitra dapur di Kalibata merugi hampir Rp1 miliar karena tak dibayar yayasan. BGN mencatat tunggakan belanja 2025 sebesar Rp1,6 triliun. Asosiasi mitra menyebut mayoritas mitra belum balik modal.",
+ ["kontanStop","gebrak","bisnisLibur"],
+ "BGN menyatakan sudah mentransfer ke rekening yayasan dan menyebut kasus Kalibata persoalan internal mitra."),
+f("Pelaksanaan di lapangan","Dampak terhadap pedagang kantin dan UMKM sekitar sekolah","2025-01-14",
+ "Sejak Januari 2025, pedagang kantin di Semarang, Jakarta, dan Malang melaporkan omzet turun sekitar 40 sampai 80%. Studi di Kota Bengkulu terhadap 96 pedagang menemukan dampak signifikan pada pendapatan.",
+ ["detik","detikFin","times","bengkulu"],
+ "Kepala BGN menyatakan kantin termasuk kriteria mitra dan bisa melayani di jam istirahat kedua."),
+];
+catatan.forEach((c,i)=>c.id="n"+(i+1));
+
+let aktif="Semua";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const slug=k=>"kat-"+k.toLowerCase().replace(/[^a-z0-9]+/g,"-");
+$("upd").textContent=UPDATED;
+
+function daftarIsi(){
+ $("toc").innerHTML="<h2>Daftar isi</h2><ul>"+KATEGORI.map(k=>`<li><a href="#${slug(k)}">${esc(k)}</a><ul>`+
+  catatan.filter(c=>c.kategori===k).map(c=>`<li><a href="#${c.id}">${esc(c.judul)}</a></li>`).join("")+"</ul></li>").join("")+"</ul>";
+}
+function tray(){
+ $("tray").innerHTML=["Semua",...KATEGORI].map(k=>{
+  const n=k==="Semua"?catatan.length:catatan.filter(c=>c.kategori===k).length;
+  return `<button aria-pressed="${k===aktif}" data-k="${esc(k)}"><b>${n}</b>${esc(k)}</button>`;}).join("");
+}
+function kartu(c){
+ if(!c.fakta) return `<article class="kosong" id="${c.id}"><h3>${esc(c.judul)}</h3>
+  <p class="meta"><span class="badge">Belum diisi</span>${esc(c.kategori)}</p>
+  <p class="meta">Cari di: ${esc(c.petunjuk)}</p></article>`;
+ const tgl=new Date(c.tanggal).toLocaleDateString("id-ID",{dateStyle:"long"});
+ return `<article id="${c.id}"><h3>${esc(c.judul)}</h3>
+  <p class="meta">${esc(c.kategori)}, ${tgl}</p><p>${esc(c.fakta)}</p>
+  <p class="meta" style="margin:8px 0 0">Sumber:</p>
+  <ol class="src">${c.sumber.map(([n,u])=>`<li><a href="${esc(u)}" target="_blank" rel="noopener">${esc(n)}</a></li>`).join("")}</ol>
+  ${c.tanggapan?`<p class="gov"><strong>Tanggapan pemerintah:</strong> ${esc(c.tanggapan)}</p>`:""}</article>`;
+}
+function render(){
+ const q=$("q").value.toLowerCase();
+ const hasil=catatan.filter(c=>(aktif==="Semua"||c.kategori===aktif)&&(c.judul+c.fakta).toLowerCase().includes(q));
+ let h="";
+ KATEGORI.forEach(k=>{const g=hasil.filter(c=>c.kategori===k);
+  if(g.length) h+=`<h2 class="kat" id="${slug(k)}">${esc(k)}</h2>`+g.map(kartu).join("");});
+ $("list").innerHTML=h||'<p class="meta">Tidak ada catatan yang cocok. Ubah kata kunci atau pilih kategori lain.</p>';
+}
+$("tray").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;aktif=b.dataset.k;tray();render();});
+$("q").addEventListener("input",render);
+daftarIsi();tray();render();
+</script>
+</body>
+</html>
